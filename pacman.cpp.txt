@@ -1,0 +1,590 @@
+// NAME: 						Roll No.
+// Hafiz Danial Ahmed Khan		241881
+// Muhammad Atif				241929
+// Daniyal Salman				241938
+
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include<fstream>
+
+using namespace std;
+
+const int MAZE_LENGTH_WIDTH = 25; // Definining maze dimensions
+bool Near_Ghost; // Flag for checking proximity to a ghost
+
+// Structure for storing the player's score details
+struct ScoreData
+{
+	int TotalMoves; // Number of moves made by the player
+	int DotsCollected; // Number of dots collected by the player
+};
+
+// Structure for storing ghost information
+struct Ghost
+{
+	int ghostDirection; // Direction the ghost is going to move
+	int ghostRow; // Ghost's current row in the maze
+	int ghostColumn; // Ghost's current column in the maze
+};
+
+// Structure for storing player's current location in the maze
+struct PlayerLocation
+{
+	int x; // Player's row position
+	int y; // Player's column position
+};
+
+// Function prototypes
+void displayscreen(const ScoreData, const int);
+void generateMaze(char**, int&);
+void DisplayMaze(char**);
+void GhostPosition(char**, Ghost*, const PlayerLocation);
+bool Ghost_Collide(char**, const PlayerLocation, const Ghost);
+void Save(char**, const int[]);
+void resume(char**, int&, ScoreData&, PlayerLocation&, Ghost&, Ghost&, int&);
+
+int main()
+{
+	PlayerLocation P = { 19,12 }; // Initial player position
+
+	// Dynamically allocating memory to a 2D array for the maze
+	char** maze = new char* [MAZE_LENGTH_WIDTH];
+	for (int i = 0; i < MAZE_LENGTH_WIDTH; i++)
+	{
+		maze[i] = new char[MAZE_LENGTH_WIDTH];
+	}
+
+	char move; // Variable to store player input
+	ScoreData score = { 0,0 }; // Initializing score
+	int dotCount = 0; // Total number of dots in the maze
+	int lives = 3; // Initial lives
+
+	Ghost ghost1 = { 0,9,18 }; // Initial position of Ghost 1
+	Ghost ghost2 = { 0,9,7 }; // Initial position of Ghost 2
+
+	cout << "<--------------------------------WELCOME TO PACMAN-------------------------------->\n\n";
+	cout << "RULES:\n";
+	cout << "Here are some Rules To Keep in mind while playing:\n";
+	cout << "1. 'W' for moving Up. 'S' for moving Down. 'A' for moving Left. 'D' for moving Right.\n";
+	cout << "2. Touching wall will loose you one life.\n";
+	cout << "3. Going in the square around a ghost will cost you all of your lives.\n";
+	cout << "4. To Save your progress, Enter 'Y' \n";
+	cout << "5. To Resume your saved Game, Enter 'Y'\n\n";
+	cout << "\t\t\t\t   -GAME START-\n\n";
+
+	cout << "Do you have a saved Game? [Y/N]: ";
+	char response;
+	cin >> response;
+
+	// Check if the player wants to resume a saved game or start a new one
+	if (response == 'Y' || response == 'y')
+	{
+		cout << "Do you want to resume that game[Y/N]: ";
+		cin >> response;
+		if (response == 'Y' || response == 'y')
+		{
+			resume(maze, dotCount, score, P, ghost1, ghost2, lives); // Resume game
+		}
+		else
+		{
+			generateMaze(maze, dotCount); // Generate a new maze
+		}
+	}
+	else
+	{
+		generateMaze(maze, dotCount); // Generate a new maze
+	}
+
+	// Seed random number generator for ghost movement
+	srand(static_cast<unsigned int>(time(0)));
+
+	// Main game loop
+	while (true)
+	{
+		system("CLS"); // Clear screen
+		DisplayMaze(maze); // Display the maze
+		cout << "\nTo save the Current Game, Enter 'Y'\n";
+		cout << "Enter 'W' for up, 'S' for down, 'A' for left, 'D' for right" << endl;
+		displayscreen(score, lives); // Display current score and moves
+
+		cin >> move; // Read player input
+
+		// Handle player movement
+		if (move == 'W' || move == 'w' || move == 'S' || move == 's' || move == 'A' || move == 'a' || move == 'D' || move == 'd')
+		{
+			score.TotalMoves++; // Increment move count
+			GhostPosition(maze, &ghost1, P); // Move ghost 1
+			GhostPosition(maze, &ghost2, P); // Move ghost 2
+
+			// Player movement logic
+			if (move == 'W' || move == 'w') // Move up
+			{
+				// Check for wall collision and handle movement
+				if (maze[P.x - 1][P.y] != '#')
+				{
+					// Check for dots and update score
+					if (maze[P.x - 1][P.y] == '.')
+					{
+						dotCount--;
+						score.DotsCollected++;
+					}
+
+					maze[P.x][P.y] = ' '; // Clear current position
+					P.x--; // Move player up
+					maze[P.x][P.y] = '^'; // Update player symbol
+				}
+				else // If collided with wall
+				{
+					lives--;
+					cout << "\nYou Collided with the Wall.\n";
+					if (lives == 0)
+					{
+						cout << "\nGAME OVER!\nYou Lost All your Lives.\n";
+						cout << endl;
+						displayscreen(score, lives); // Display current score and moves
+						break;
+					}
+					displayscreen(score, lives); // Display current score and moves
+					continue; // loop's currrent iteration stops 
+				}
+			}
+
+			else if (move == 'S' || move == 's') // Move Down
+			{
+				// Check for wall collision and handle movement
+				if (maze[P.x + 1][P.y] != '#')
+				{
+					// Check for dots and update score
+					if (maze[P.x + 1][P.y] == '.')
+					{
+						dotCount--;
+						score.DotsCollected++;
+					}
+
+					maze[P.x][P.y] = ' '; // Clear current position
+					P.x++; // Move player down
+					maze[P.x][P.y] = 'v'; // Update player symbol
+				}
+				else // If collided with wall 
+				{
+					lives--;
+					cout << "\nYou Collided with the Wall.\n";
+					if (lives == 0)
+					{
+						cout << "\nGAME OVER!\nYou Lost All your Lives.\n";
+						cout << endl;
+						displayscreen(score, lives); // Display current score and moves
+						break;
+					}
+					displayscreen(score, lives); // Display current score and moves
+					continue; // loop's currrent iteration stops 
+				}
+			}
+
+			else if (move == 'A' || move == 'a') // Move Left
+			{
+				// Check for wall collision and handle movement
+				if (maze[P.x][P.y - 1] != '#')
+				{
+					// Check for dots and update score
+					if (maze[P.x][P.y - 1] == '.')
+					{
+						dotCount--;
+						score.DotsCollected++;
+					}
+
+					maze[P.x][P.y] = ' '; // Clear current position
+					P.y--; // Move player left
+					maze[P.x][P.y] = '<'; // Update player symbol
+				}
+				else // If collided with wall
+				{
+					lives--;
+					cout << "\nYou Collided with the Wall.\n";
+					if (lives == 0)
+					{
+						cout << "\nGAME OVER!\nYou Lost All your Lives.\n";
+						cout << endl;
+						displayscreen(score, lives); // Display current score and moves
+						break;
+					}
+					displayscreen(score, lives); // Display current score and moves
+					continue; // loop's currrent iteration stops 
+				}
+			}
+
+			else // Move Right
+			{
+				// Check for wall collision and handle movement
+				if (maze[P.x][P.y + 1] != '#')
+				{
+					// Check for dots and update score
+					if (maze[P.x][P.y + 1] == '.')
+					{
+						dotCount--;
+						score.DotsCollected++;
+					}
+
+					maze[P.x][P.y] = ' '; // Clear current position
+					P.y++; // Move player right
+					maze[P.x][P.y] = '>'; // Update player symbol
+				}
+				else // If collided with wall
+				{
+					lives--;
+					cout << "\nYou Collided with the Wall.\n";
+					if (lives == 0)
+					{
+						cout << "\nGAME OVER!\nYou Lost All your Lives.\n";
+						cout << endl;
+						displayscreen(score, lives); // Display current score and moves
+						break;
+					}
+					displayscreen(score, lives); // Display current score and moves
+					continue; // loop's currrent iteration stops 
+				}
+			}
+
+			// Check for collision with ghosts
+			if (Ghost_Collide(maze, P, ghost1) || Ghost_Collide(maze, P, ghost2))
+			{
+				cout << "\nGAME OVER!\nYou Collided with a Ghost\n";
+				cout << endl;
+				displayscreen(score, lives);
+				break;
+			}
+
+			// Check if player collected all dots
+			if (dotCount == 0)
+			{
+				cout << "\nYOU WIN!\nYou Collected all the Dots\n";
+				cout << endl;
+				displayscreen(score, lives);
+				break;
+
+			}
+		}
+
+		else if (move == 'Y' || move == 'y') // Save game
+		{
+			int saveData[10] = { dotCount,score.TotalMoves,score.DotsCollected,P.x,P.y,ghost1.ghostRow,ghost1.ghostColumn,ghost2.ghostRow,ghost2.ghostColumn,lives };
+			Save(maze, saveData);
+			break;
+		}
+
+		else // Invalid input
+		{
+			cout << "\nINVALID MOVE\nPlease Try Again" << endl;
+			cout << endl;
+		}
+		cout << endl;
+	}
+
+	// Deallocating the maze memory
+	for (int i = 0; i < MAZE_LENGTH_WIDTH; i++)
+	{
+		delete[] maze[i];
+	}
+	delete[] maze;
+	return 0; // End of Program
+}
+
+// Function to display the score
+void displayscreen(const ScoreData score, int lives)
+{
+	cout << "Lives: ";
+	switch (lives)
+	{
+	case 1:
+		cout << "^^\n";
+		cout << "       \\/\n";
+		break;
+	case 2:
+		cout << "^^  ^^\n";
+		cout << "       \\/  \\/\n";
+		break;
+	case 3:
+		cout << "^^  ^^  ^^\n";
+		cout << "       \\/  \\/  \\/\n";
+		break;
+	default:
+		cout << endl;
+		break;
+	}
+	cout << "MOVES: " << score.TotalMoves << endl;
+	cout << "SCORE: " << score.DotsCollected << endl;
+	cout << "LIVES: " << lives << endl;
+}
+
+// Function to check if a cell is a wall
+static bool isWall(const int i, const int j)
+{
+	// Defining wall conditions
+	return i == 0 || i == 24 || j == 0 || j == 24 ||
+		(i == 3 && (j >= 3 && j <= 8)) ||
+		(i == 4 && (j >= 3 && j <= 8)) ||
+		(i == 3 && (j >= 16 && j <= 21)) ||
+		(i == 4 && (j >= 16 && j <= 21)) ||
+		(j == 4 && (i >= 8 && i <= 16)) ||
+		(j == 20 && (i >= 8 && i <= 16)) ||
+		(i == 8 && (j >= 8 && j <= 16)) ||
+		(j == 12 && (i >= 9 && i <= 13)) ||
+		(i == 12 && (j >= 5 && j <= 9)) ||
+		(i == 12 && (j >= 15 && j <= 19)) ||
+		(j == 8 && (i >= 16 && i <= 21)) ||
+		(j == 16 && (i >= 16 && i <= 21)) ||
+		(i == 21 && (j >= 3 && j <= 6)) ||
+		(i == 21 && (j >= 8 && j <= 16)) ||
+		(i == 21 && (j >= 18 && j <= 21)) ||
+		(i == 20 && (j >= 3 && j <= 6)) ||
+		(i == 20 && (j >= 18 && j <= 21)) ||
+		(i == 16 && (j == 9 || j == 10)) ||
+		(i == 16 && (j == 14 || j == 15));
+}
+
+// Function for generating the Maze
+void generateMaze(char** maze, int& dotCount)
+{
+	for (int i = 0; i < MAZE_LENGTH_WIDTH; i++)
+	{
+		for (int j = 0; j < MAZE_LENGTH_WIDTH; j++)
+		{
+			if (isWall(i, j))
+			{
+				maze[i][j] = '#'; // Marking the cell as wall
+			}
+			else
+			{
+				maze[i][j] = '.'; // Marking the cell as open path
+				dotCount++; // Keeping the dot Count for later checking if user won or not
+			}
+		}
+	}
+	maze[19][12] = '>';
+}
+
+// Function to displaying the maze on console
+void DisplayMaze(char** maze)
+{
+	for (int i = 0; i < MAZE_LENGTH_WIDTH; i++) {
+		for (int j = 0; j < MAZE_LENGTH_WIDTH; j++) {
+			cout << maze[i][j] << " ";
+		}
+		cout << endl;
+	}
+}
+
+// Function to handle ghost movement
+void GhostPosition(char** maze, Ghost* ghost, const PlayerLocation P)
+{
+	static bool pallet_Ghost=true;
+	if ((P.x == ghost->ghostRow && (P.y - 1) == ghost->ghostColumn) ||
+		((P.x - 1) == ghost->ghostRow && P.y == ghost->ghostColumn) ||
+		(P.x == ghost->ghostRow && (P.y + 1) == ghost->ghostColumn) ||
+		((P.x + 1) == ghost->ghostRow && P.y == ghost->ghostColumn) ||
+		((P.x + 1) == ghost->ghostRow && (P.y + 1) == ghost->ghostColumn) ||
+		((P.x - 1) == ghost->ghostRow && (P.y - 1) == ghost->ghostColumn))
+	{
+		Near_Ghost = true;
+		return;
+	}
+
+	ghost->ghostDirection = rand() % 5;
+	switch (ghost->ghostDirection) {
+
+	case 0:
+		if (maze[ghost->ghostRow - 1][ghost->ghostColumn] != '#')
+		{
+			if (pallet_Ghost)
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = '.';
+			}
+			else
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = ' ';
+			}
+			if (maze[ghost->ghostRow - 1][ghost->ghostColumn] == '.')
+			{
+				pallet_Ghost = true;
+			}
+			else
+			{
+				pallet_Ghost = false;
+			}
+			
+			ghost->ghostRow--;
+			break;
+		}
+
+		/* FALLTHRU */
+	case 1:
+		if (maze[ghost->ghostRow + 1][ghost->ghostColumn] != '#')
+		{
+			if (pallet_Ghost)
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = '.';
+			}
+			else
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = ' ';
+			}
+			if (maze[ghost->ghostRow + 1][ghost->ghostColumn] == '.')
+			{
+				pallet_Ghost = true;
+			}
+			else
+			{
+				pallet_Ghost = false;
+			}
+			
+			ghost->ghostRow++;
+			break;
+		}
+
+		/* FALLTHRU */
+	case 2:
+		if (maze[ghost->ghostRow][ghost->ghostColumn - 1] != '#')
+		{
+			if (pallet_Ghost)
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = '.';
+			}
+			else
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = ' ';
+			}
+			if (maze[ghost->ghostRow][ghost->ghostColumn - 1] == '.')
+			{
+				pallet_Ghost = true;
+			}
+			else
+			{
+				pallet_Ghost = false;
+			}
+			
+			ghost->ghostColumn--;
+			break;
+		}
+
+		/* FALLTHRU */
+	case 3:
+		if (maze[ghost->ghostRow][ghost->ghostColumn + 1] != '#')
+		{
+			if (pallet_Ghost)
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = '.';
+			}
+			else
+			{
+				maze[ghost->ghostRow][ghost->ghostColumn] = ' ';
+			}
+			if (maze[ghost->ghostRow][ghost->ghostColumn + 1] == '.')
+			{
+				pallet_Ghost = true;
+			}
+			else
+			{
+				pallet_Ghost = false;
+			}
+			
+			ghost->ghostColumn++;
+			break;
+		}
+
+		/* FALLTHRU */
+	case 4:
+		break;
+	}
+
+	maze[ghost->ghostRow][ghost->ghostColumn] = '8';
+}
+
+// Function to check if the player collides with a ghost
+bool Ghost_Collide(char** maze, const PlayerLocation P, const Ghost ghost)
+{
+	if (Near_Ghost)
+	{
+		return true;
+	}
+
+	if ((P.x == ghost.ghostRow && P.y == ghost.ghostColumn) || maze[P.x][P.y] == '8')
+	{
+		return true;
+	}
+	return false;
+}
+
+// Function to save the game
+void Save(char** maze, const int saveData[])
+{
+	ofstream fout("GAMEDATA.txt");
+
+	if (!fout)
+	{
+		cout << "Error Opening the file." << endl;
+		return;
+	}
+
+	for (int i = 0; i < MAZE_LENGTH_WIDTH; i++)
+	{
+		for (int j = 0; j < MAZE_LENGTH_WIDTH; j++)
+		{
+			fout << maze[i][j];
+		}
+	}
+
+	for (int i = 0; i < 10; i++)
+	{
+		fout << endl << saveData[i];
+	}
+	fout << endl;
+
+	cout << "Game Saved Succesfully.\nIf you want to resume the game, reopen the Game and enter 'Y'.\n";
+
+	fout.close();
+}
+
+// Function to resume a saved game
+void resume(char** maze, int& dotCount, ScoreData& score, PlayerLocation& P, Ghost& ghost1, Ghost& ghost2, int& lives)
+{
+	ifstream fin("GAMEDATA.txt");
+
+	if (!fin)
+	{
+		cout << "Error: No Saved Game data exists." << endl;
+		return;
+	}
+
+	for (int i = 0; i < MAZE_LENGTH_WIDTH; i++)
+	{
+		for (int j = 0; j < MAZE_LENGTH_WIDTH; j++)
+		{
+			fin >> noskipws >> maze[i][j];
+		}
+	}
+
+	fin.ignore();
+	fin >> dotCount;
+	fin.ignore();
+	fin >> score.TotalMoves;
+	fin.ignore();
+	fin >> score.DotsCollected;
+	fin.ignore();
+	fin >> P.x;
+	fin.ignore();
+	fin >> P.y;
+	fin.ignore();
+	fin >> ghost1.ghostRow;
+	fin.ignore();
+	fin >> ghost1.ghostColumn;
+	fin.ignore();
+	fin >> ghost2.ghostRow;
+	fin.ignore();
+	fin >> ghost2.ghostColumn;
+	fin.ignore();
+	fin >> lives;
+
+	cout << "Game Resumed:\n\n";
+	fin.close();
+}
