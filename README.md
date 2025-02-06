@@ -7,10 +7,23 @@ This is my pacman project built in cpp
 
 
 Features:
+
 Lives
+
 Player
+
 Maze
+
 Ghost
+
 Score calculation 
+
 Input and Output Validation
+
 File Handling
+
+
+Technologies:
+C++
+VS Code 
+Visual Studio
