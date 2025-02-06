@@ -1,7 +1,4 @@
-// NAME: 						Roll No.
-// Hafiz Danial Ahmed Khan		241881
-// Muhammad Atif				241929
-// Daniyal Salman				241938
+
 
 #include <iostream>
 #include <cstdlib>
